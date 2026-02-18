@@ -4,7 +4,8 @@ import { Send, Sparkles, User, Cpu } from 'lucide-react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Replace 'YOUR_API_KEY' with your actual Google AI Studio Key
-const genAI = new GoogleGenerativeAI("YOUR_API_KEY");
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+
 
 export default function App() {
   const [input, setInput] = useState("");
