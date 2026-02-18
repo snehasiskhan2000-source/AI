@@ -9,7 +9,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  // Auto-scroll to the latest message for better mobile UX
+  // Auto-scroll for mobile users
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -19,14 +19,13 @@ export default function App() {
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // Access the key directly from the environment
+    // Get the key from your Render Environment Variables
     const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-    // Error handling if the key name in Render doesn't match
     if (!API_KEY) {
       setMessages(prev => [...prev, { 
         role: "ai", 
-        text: "Error: Key not found. Please ensure the Key in Render is exactly VITE_GEMINI_API_KEY." 
+        text: "Error: VITE_GEMINI_API_KEY is not set in Render settings." 
       }]);
       return;
     }
@@ -37,22 +36,21 @@ export default function App() {
     setLoading(true);
 
     try {
-      // Initialize the AI with the key from your Render environment
       const genAI = new GoogleGenerativeAI(API_KEY);
       
-      // Use 'gemini-1.5-flash' for the most stable Free Tier performance
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      /** * UPDATED FOR 2026: 
+       * Using 'gemini-3-flash' as the primary high-speed model.
+       */
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
       
       const result = await model.generateContent(input);
       const response = await result.response;
-      const text = response.text();
-      
-      setMessages((prev) => [...prev, { role: "ai", text: text }]);
+      setMessages((prev) => [...prev, { role: "ai", text: response.text() }]);
     } catch (error) {
-      console.error("AI Connection Error:", error);
+      console.error("Gemini 3 Error:", error);
       setMessages((prev) => [...prev, { 
         role: "ai", 
-        text: "The AI is busy or the API key is invalid. Try again in a moment." 
+        text: "Connection failed. Please ensure your API Key is for Gemini 3 and you've cleared Render's cache." 
       }]);
     } finally {
       setLoading(false);
@@ -63,11 +61,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0e0e12] text-white font-sans flex flex-col">
-      {/* Navbar */}
+      {/* Glass Navbar */}
       <nav className="flex justify-between items-center p-5 border-b border-white/5 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <Sparkles className="text-blue-400" size={20} />
-          <span className="text-xl font-bold tracking-tight">Gemini <span className="text-blue-500">Pro</span></span>
+          <div className="bg-blue-600 p-1 rounded-lg">
+            <Sparkles className="text-white" size={18} />
+          </div>
+          <span className="text-xl font-bold tracking-tight">Gemini <span className="text-blue-500">3 Flash</span></span>
         </div>
         <div className="flex gap-4">
           <button onClick={clearChat} className="p-2 text-gray-400 hover:text-red-400 transition">
@@ -82,10 +82,14 @@ export default function App() {
         <AnimatePresence>
           {messages.length === 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center mt-20">
-              <h2 className="text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+              <motion.h2 
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-5xl md:text-7xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4"
+              >
                 Hello, Friend
-              </h2>
-              <p className="text-gray-500">Ask your new AI anything.</p>
+              </motion.h2>
+              <p className="text-gray-500 text-lg">Gemini 3 Flash is ready to assist.</p>
             </div>
           ) : (
             messages.map((msg, i) => (
@@ -96,11 +100,11 @@ export default function App() {
                 className={`flex gap-4 mb-6 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`max-w-[85%] p-4 rounded-2xl ${
-                  msg.role === 'user' ? 'bg-blue-600 shadow-lg' : 'bg-[#1e1f20] border border-gray-800 shadow-xl'
+                  msg.role === 'user' ? 'bg-blue-600' : 'bg-[#1e1f20] border border-gray-800'
                 }`}>
                   <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase opacity-30">
                     {msg.role === 'user' ? <User size={12}/> : <Cpu size={12}/>}
-                    {msg.role === 'user' ? 'You' : 'Gemini'}
+                    {msg.role === 'user' ? 'You' : 'Gemini 3'}
                   </div>
                   <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 </div>
@@ -109,7 +113,7 @@ export default function App() {
           )}
           {loading && (
             <div className="flex gap-2 items-center text-blue-400 text-sm ml-2 animate-pulse">
-              <Cpu size={14} className="animate-spin" /> Gemini is thinking...
+              Thinking...
             </div>
           )}
         </AnimatePresence>
@@ -123,7 +127,7 @@ export default function App() {
             onChange={(e) => setInput(e.target.value)} 
             onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
             className="flex-1 bg-transparent border-none outline-none p-4 text-white" 
-            placeholder="Enter a prompt here..." 
+            placeholder="What's on your mind?" 
           />
           <button 
             onClick={handleSend} 
