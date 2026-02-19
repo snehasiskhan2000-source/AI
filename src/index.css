@@ -1,6 +1,4 @@
 @import "tailwindcss";
-
-/* This makes AI replies look like Gemini (bold, lists, spacing) */
 @plugin "@tailwindcss/typography";
 
 @theme {
@@ -8,7 +6,6 @@
   --color-chad-dark: #0b0b0f;
 }
 
-/* Base styles for the dark mode toggle */
 :root {
   --background: #ffffff;
   --foreground: #0b0b0f;
