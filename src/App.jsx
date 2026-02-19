@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Zap, User, Trash2, Moon, Sun, Volume2, StopCircle, Sparkles } from 'lucide-react';
+import { Send, Zap, Trash2, Moon, Sun, Volume2, StopCircle, Sparkles } from 'lucide-react';
 import Groq from "groq-sdk";
 import Markdown from 'react-markdown';
 
@@ -10,27 +10,19 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [speakingId, setSpeakingId] = useState(null);
-  
-  // Ref for the bottom of the chat
   const messagesEndRef = useRef(null);
 
   const toggleTheme = () => setIsDark(!isDark);
 
-  // Auto-scroll function
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // Trigger scroll whenever messages change
+  // Smooth scroll to bottom
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const speak = (text, id) => {
     window.speechSynthesis.cancel();
     if (speakingId === id) { setSpeakingId(null); return; }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05;
     utterance.onstart = () => setSpeakingId(id);
     utterance.onend = () => setSpeakingId(null);
     window.speechSynthesis.speak(utterance);
@@ -54,7 +46,7 @@ export default function App() {
       const groq = new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true });
       const stream = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: `You are ChadGPT by TechBittu. Today is ${today}. Use markdown.` }, 
+          { role: "system", content: `You are ChadGPT by TechBittu. Today is ${today}.` }, 
           { role: "user", content: input }
         ],
         model: "llama-3.3-70b-versatile",
@@ -70,7 +62,7 @@ export default function App() {
   };
 
   return (
-    <div className={`${isDark ? 'dark bg-[#050505] text-white' : 'bg-gray-50 text-gray-900'} min-h-screen flex flex-col transition-colors duration-500 font-sans`}>
+    <div className={`${isDark ? 'dark bg-[#050505] text-white' : 'bg-gray-50 text-gray-900'} min-h-screen flex flex-col transition-colors duration-500`}>
       
       <nav className="p-4 border-b border-blue-500/10 flex justify-between items-center backdrop-blur-xl sticky top-0 z-50 bg-inherit/80">
         <div className="flex items-center gap-2">
@@ -89,39 +81,61 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full space-y-8 pb-32 scroll-smooth">
-        <AnimatePresence mode="wait">
-          {messages.length === 0 ? (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6">
-              <Sparkles className="text-blue-500 w-16 h-16 animate-pulse" />
-              <h2 className="text-4xl font-black tracking-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
-            </motion.div>
-          ) : (
-            messages.map((m, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'}`}>
-                  <div className="flex justify-between items-center mb-2 opacity-50 text-[10px] font-bold uppercase tracking-widest">
-                    <span>{m.role === 'user' ? 'Member' : 'ChadGPT'}</span>
-                    {m.role === 'ai' && (
-                      <button onClick={() => speak(m.text, m.id)} className="text-blue-500 ml-4">{speakingId === m.id ? <StopCircle size={14} /> : <Volume2 size={14} />}</button>
-                    )}
+      <main className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full space-y-8 pb-32">
+        {messages.length === 0 ? (
+          /* Wrap the welcome in a single motion div with a unique key */
+          <motion.div 
+            key="welcome-screen"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6"
+          >
+            <Sparkles className="text-blue-500 w-16 h-16 animate-pulse" />
+            <h2 className="text-4xl font-black tracking-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
+          </motion.div>
+        ) : (
+          <div className="space-y-8">
+            <AnimatePresence initial={false}>
+              {messages.map((m, i) => (
+                <motion.div 
+                  key={m.id || i} 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'}`}>
+                    <div className="flex justify-between items-center mb-2 opacity-50 text-[10px] font-bold uppercase tracking-widest">
+                      <span>{m.role === 'user' ? 'Member' : 'ChadGPT'}</span>
+                      {m.role === 'ai' && (
+                        <button onClick={() => speak(m.text, m.id)} className="text-blue-500 ml-4">
+                          {speakingId === m.id ? <StopCircle size={14} /> : <Volume2 size={14} />}
+                        </button>
+                      )}
+                    </div>
+                    <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium leading-relaxed">
+                      <Markdown>{m.text}</Markdown>
+                    </div>
                   </div>
-                  <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium leading-relaxed">
-                    <Markdown>{m.text}</Markdown>
-                  </div>
-                </div>
-              </motion.div>
-            ))
-          )}
-          {/* Invisible element to anchor the scroll */}
-          <div ref={messagesEndRef} />
-        </AnimatePresence>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
+        )}
       </main>
 
       <footer className="p-4 fixed bottom-0 left-0 right-0 bg-gradient-to-t from-inherit via-inherit to-transparent z-40">
         <div className="max-w-3xl mx-auto flex items-center gap-2 bg-white dark:bg-[#111116] p-2 rounded-2xl border border-blue-500/20 shadow-2xl">
-          <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent p-3 outline-none text-sm" placeholder="Ask TechBittu's AI..." />
-          <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white transition-all disabled:opacity-30"><Send size={20}/></button>
+          <input 
+            value={input} 
+            onChange={e => setInput(e.target.value)} 
+            onKeyPress={e => e.key === 'Enter' && handleSend()} 
+            className="flex-1 bg-transparent p-3 outline-none text-sm" 
+            placeholder="Ask TechBittu's AI..." 
+          />
+          <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white transition-all active:scale-95 disabled:opacity-30">
+            <Send size={20}/>
+          </button>
         </div>
       </footer>
     </div>
