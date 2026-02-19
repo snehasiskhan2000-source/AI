@@ -18,6 +18,7 @@ export default function App() {
     window.speechSynthesis.cancel();
     if (speakingId === id) { setSpeakingId(null); return; }
     const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.05; // Slightly faster for a "Chad" vibe
     utterance.onstart = () => setSpeakingId(id);
     utterance.onend = () => setSpeakingId(null);
     window.speechSynthesis.speak(utterance);
@@ -31,6 +32,11 @@ export default function App() {
     if (!input.trim()) return;
     const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
     
+    // FIX: Get current date to tell the AI
+    const today = new Date().toLocaleDateString('en-IN', { 
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+    });
+
     setMessages(prev => [...prev, { role: "user", text: input }]);
     setInput("");
     setLoading(true);
@@ -41,7 +47,13 @@ export default function App() {
     try {
       const groq = new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true });
       const stream = await groq.chat.completions.create({
-        messages: [{ role: "system", content: "You are ChadGPT. A fast, blue-themed AI." }, { role: "user", content: input }],
+        messages: [
+          { 
+            role: "system", 
+            content: `You are ChadGPT, a premium AI assistant created by TechBittu. Today is ${today}. Use markdown for all responses. Your personality is helpful, direct, and professional. Your UI theme is Electric Blue and Deep Black.` 
+          }, 
+          { role: "user", content: input }
+        ],
         model: "llama-3.3-70b-versatile",
         stream: true,
       });
@@ -81,9 +93,7 @@ export default function App() {
         <AnimatePresence mode="wait">
           {messages.length === 0 ? (
             <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
               className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6"
             >
               <div className="relative">
@@ -92,21 +102,17 @@ export default function App() {
               </div>
               <div className="space-y-2">
                 <h2 className="text-4xl font-black tracking-tight leading-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
-                <p className="text-gray-500 font-medium max-w-sm mx-auto italic">Fast. Blue. Animated. Ready to work.</p>
+                <p className="text-gray-500 font-medium max-w-sm mx-auto italic">TechBittu's flagship AI. Fast, Blue, and Intelligent.</p>
               </div>
             </motion.div>
           ) : (
             messages.map((m, i) => (
               <motion.div 
-                key={i} 
-                initial={{ opacity: 0, x: m.role === 'user' ? 20 : -20 }} 
-                animate={{ opacity: 1, x: 0 }}
+                key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${
-                  m.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-none' 
-                  : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'
+                  m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'
                 }`}>
                   <div className="flex justify-between items-center mb-2 opacity-50 text-[10px] font-bold uppercase tracking-widest">
                     <span>{m.role === 'user' ? 'Member' : 'ChadGPT'}</span>
@@ -116,7 +122,7 @@ export default function App() {
                       </button>
                     )}
                   </div>
-                  <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium">
+                  <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium leading-relaxed">
                     <Markdown>{m.text}</Markdown>
                   </div>
                 </div>
@@ -130,17 +136,10 @@ export default function App() {
       <footer className="p-4 fixed bottom-0 left-0 right-0 bg-gradient-to-t from-inherit via-inherit to-transparent z-40">
         <div className="max-w-3xl mx-auto flex items-center gap-2 bg-white dark:bg-[#111116] p-2 rounded-2xl border border-blue-500/20 shadow-2xl focus-within:ring-2 ring-blue-500/20 transition-all">
           <input 
-            value={input} 
-            onChange={e => setInput(e.target.value)} 
-            onKeyPress={e => e.key === 'Enter' && handleSend()} 
-            className="flex-1 bg-transparent p-3 outline-none text-sm" 
-            placeholder="Talk to ChadGPT..." 
+            value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} 
+            className="flex-1 bg-transparent p-3 outline-none text-sm" placeholder="Ask TechBittu's AI anything..." 
           />
-          <button 
-            onClick={handleSend} 
-            disabled={loading} 
-            className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white shadow-lg active:scale-90 transition-all disabled:opacity-30"
-          >
+          <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white shadow-lg active:scale-90 transition-all disabled:opacity-30">
             <Send size={20}/>
           </button>
         </div>
