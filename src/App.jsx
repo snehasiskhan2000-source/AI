@@ -38,7 +38,7 @@ export default function App() {
           { role: "system", content: "You are a helpful, lightning-fast AI assistant." },
           { role: "user", content: input }
         ],
-        model: "llama-3.3-70b-versatile", // Using Llama 3.3 for high performance
+        model: "llama-3.1-8b-instant", // Using Llama 3.3 for high performance
       });
 
       const responseText = chatCompletion.choices[0]?.message?.content || "No response received.";
