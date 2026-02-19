@@ -2,16 +2,20 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-chad-orange: #ea580c;
-  --color-chad-dark: #0b0b0f;
+  --color-chad-blue: #2563eb;
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #0b0b0f;
+/* Custom Scrollbar for the Blue Theme */
+::-webkit-scrollbar {
+  width: 5px;
 }
-
-.dark {
-  --background: #0b0b0f;
-  --foreground: #ffffff;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2563eb33;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
 }
