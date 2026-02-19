@@ -1,51 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/* This makes AI replies look like Gemini (bold, lists, spacing) */
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-chad-orange: #ea580c;
+  --color-chad-dark: #0b0b0f;
+}
+
+/* Base styles for the dark mode toggle */
 :root {
-  color-scheme: dark;
+  --background: #ffffff;
+  --foreground: #0b0b0f;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #0e0e12;
-  overflow-x: hidden;
-}
-
-/* Custom Scrollbar for the Chat Window */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #282a2d;
-  border-radius: 10px;
-}
-
-/* The "Gemini" Text Shimmer Animation */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.animate-shimmer {
-  background: linear-gradient(90deg, #4285f4, #9b72cb, #d96570, #4285f4);
-  background-size: 200% auto;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: shimmer 4s linear infinite;
-}
-
-/* Smooth Transition for Glassmorphism */
-.glass-input {
-  background: rgba(30, 31, 32, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.dark {
+  --background: #0b0b0f;
+  --foreground: #ffffff;
 }
