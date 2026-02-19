@@ -14,7 +14,14 @@ export default function App() {
 
   const toggleTheme = () => setIsDark(!isDark);
 
-  // Smooth scroll to bottom
+  // FIX: Clear chat function to prevent duplicate welcome screens
+  const clearChat = () => {
+    window.speechSynthesis.cancel();
+    setSpeakingId(null);
+    setMessages([]);
+    setLoading(false);
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -29,17 +36,18 @@ export default function App() {
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
     const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
     const today = new Date().toLocaleDateString('en-IN', { 
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
     });
 
-    setMessages(prev => [...prev, { role: "user", text: input }]);
+    const userMsg = { role: "user", text: input, id: Date.now() };
+    setMessages(prev => [...prev, userMsg]);
     setInput("");
     setLoading(true);
 
-    const aiId = Date.now();
+    const aiId = Date.now() + 1;
     setMessages(prev => [...prev, { role: "ai", text: "", id: aiId }]);
 
     try {
@@ -75,53 +83,53 @@ export default function App() {
           <button onClick={toggleTheme} className="p-2 hover:bg-blue-500/10 rounded-xl transition-all">
             {isDark ? <Sun size={20} className="text-blue-400" /> : <Moon size={20} className="text-blue-600" />}
           </button>
-          <button onClick={() => setMessages([])} className="p-2 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all">
+          <button onClick={clearChat} className="p-2 hover:bg-red-500/10 text-gray-400 hover:text-red-500 transition-all">
             <Trash2 size={20}/>
           </button>
         </div>
       </nav>
 
       <main className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full space-y-8 pb-32">
-        {messages.length === 0 ? (
-          /* Wrap the welcome in a single motion div with a unique key */
-          <motion.div 
-            key="welcome-screen"
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6"
-          >
-            <Sparkles className="text-blue-500 w-16 h-16 animate-pulse" />
-            <h2 className="text-4xl font-black tracking-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
-          </motion.div>
-        ) : (
-          <div className="space-y-8">
-            <AnimatePresence initial={false}>
-              {messages.map((m, i) => (
-                <motion.div 
-                  key={m.id || i} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
-                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+        <AnimatePresence mode="wait">
+          {messages.length === 0 ? (
+            <motion.div 
+              key="static-welcome" // Fixed key prevents doubling
+              initial={{ opacity: 0, scale: 0.9 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0 }}
+              className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6"
+            >
+              <Sparkles className="text-blue-500 w-16 h-16 animate-pulse" />
+              <h2 className="text-4xl font-black tracking-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="chat-content" 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              className="space-y-8"
+            >
+              {messages.map((m) => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'}`}>
                     <div className="flex justify-between items-center mb-2 opacity-50 text-[10px] font-bold uppercase tracking-widest">
                       <span>{m.role === 'user' ? 'Member' : 'ChadGPT'}</span>
-                      {m.role === 'ai' && (
+                      {m.role === 'ai' && m.text && (
                         <button onClick={() => speak(m.text, m.id)} className="text-blue-500 ml-4">
                           {speakingId === m.id ? <StopCircle size={14} /> : <Volume2 size={14} />}
                         </button>
                       )}
                     </div>
-                    <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium leading-relaxed">
+                    <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium">
                       <Markdown>{m.text}</Markdown>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
-        )}
+              <div ref={messagesEndRef} className="h-2" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       <footer className="p-4 fixed bottom-0 left-0 right-0 bg-gradient-to-t from-inherit via-inherit to-transparent z-40">
