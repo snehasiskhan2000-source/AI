@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Cpu, User, Trash2 } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Send, Sparkles, Zap, User, Trash2 } from 'lucide-react';
+import Groq from "groq-sdk";
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -9,24 +9,17 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  // Keep chat scrolled to bottom
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
 
-    // 1. Fetch Key from Render Env
-    const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
     if (!API_KEY) {
-      setMessages(prev => [...prev, { 
-        role: "ai", 
-        text: "System: API Key not detected. Please verify VITE_GEMINI_API_KEY in Render." 
-      }]);
+      setMessages(prev => [...prev, { role: "ai", text: "Error: VITE_GROQ_API_KEY not found in Render." }]);
       return;
     }
 
@@ -36,27 +29,23 @@ export default function App() {
     setLoading(true);
 
     try {
-      const genAI = new GoogleGenerativeAI(API_KEY);
-      
-      /** * MODEL UPDATE 2026: 
-       * Using 'gemini-3-flash-preview' for high-speed agentic reasoning.
-       */
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-3-flash-preview",
-        systemInstruction: "You are a helpful AI assistant. Provide concise, accurate, and friendly responses."
+      // 1. Initialize Groq Client
+      const groq = new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true });
+
+      // 2. Request Chat Completion
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are a helpful, lightning-fast AI assistant." },
+          { role: "user", content: input }
+        ],
+        model: "llama-3.3-70b-versatile", // Using Llama 3.3 for high performance
       });
-      
-      const result = await model.generateContent(input);
-      const response = await result.response;
-      const text = response.text();
-      
-      setMessages(prev => [...prev, { role: "ai", text }]);
+
+      const responseText = chatCompletion.choices[0]?.message?.content || "No response received.";
+      setMessages(prev => [...prev, { role: "ai", text: responseText }]);
     } catch (error) {
-      console.error("Gemini 3 Error:", error);
-      setMessages(prev => [...prev, { 
-        role: "ai", 
-        text: "I'm having trouble connecting to Gemini 3. Check your API quota or region support." 
-      }]);
+      console.error("Groq Error:", error);
+      setMessages(prev => [...prev, { role: "ai", text: "Groq is currently unavailable. Check your API key or quota." }]);
     } finally {
       setLoading(false);
     }
@@ -65,94 +54,57 @@ export default function App() {
   const clearChat = () => setMessages([]);
 
   return (
-    <div className="min-h-screen bg-[#0e0e12] text-white font-sans flex flex-col selection:bg-blue-500/30">
-      {/* Background Glows */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 blur-[120px] rounded-full" />
-      </div>
-
+    <div className="min-h-screen bg-[#0b0b0f] text-white flex flex-col font-sans">
       {/* Header */}
-      <nav className="flex justify-between items-center p-5 backdrop-blur-xl border-b border-white/5 sticky top-0 z-20">
+      <nav className="flex justify-between items-center p-5 border-b border-white/5 backdrop-blur-lg sticky top-0 z-20">
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-600/20">
-            <Sparkles className="text-white" size={18} />
+          <div className="bg-orange-500 p-1.5 rounded-lg">
+            <Zap className="text-white" size={18} fill="white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Gemini <span className="text-blue-500">3 Flash</span></span>
+          <span className="text-xl font-bold tracking-tight">Groq <span className="text-orange-500">Fast</span></span>
         </div>
-        <div className="flex gap-3">
-          <button onClick={clearChat} className="p-2 text-gray-400 hover:text-red-400 transition-all hover:bg-white/5 rounded-lg">
-            <Trash2 size={20} />
-          </button>
-          <button className="px-5 py-2 bg-white text-black rounded-full font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg">
-            Sign Up
-          </button>
-        </div>
+        <button onClick={clearChat} className="p-2 text-gray-400 hover:text-red-400 transition"><Trash2 size={20}/></button>
       </nav>
 
-      {/* Chat History */}
+      {/* Messages */}
       <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-8 max-w-4xl mx-auto w-full space-y-6">
         <AnimatePresence>
           {messages.length === 0 ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col justify-center items-center text-center pt-20">
-              <h2 className="text-6xl font-black bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent mb-4">
-                Hello, Friend
+            <div className="h-full flex flex-col justify-center items-center text-center pt-20">
+              <h2 className="text-5xl font-black bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent mb-4">
+                Instant AI
               </h2>
-              <p className="text-gray-500 text-lg max-w-xs">Powered by Google Gemini 3. Ready for your first prompt.</p>
-            </motion.div>
+              <p className="text-gray-500">Groq is active and ready to reply instantly.</p>
+            </div>
           ) : (
             messages.map((msg, i) => (
-              <motion.div 
-                key={i} 
-                initial={{ opacity: 0, y: 10 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`max-w-[85%] p-4 rounded-2xl ${
-                  msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-none' 
-                  : 'bg-[#1c1c22] border border-white/5 text-gray-100 rounded-tl-none'
-                }`}>
-                  <div className="flex items-center gap-2 mb-1.5 text-[10px] font-black uppercase tracking-tighter opacity-40">
-                    {msg.role === 'user' ? <User size={12}/> : <Cpu size={12}/>}
-                    {msg.role === 'user' ? 'Human' : 'Gemini 3'}
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-orange-600' : 'bg-[#16161c] border border-white/5'}`}>
+                  <div className="flex items-center gap-2 mb-1 text-[10px] font-bold uppercase opacity-30">
+                    {msg.role === 'user' ? <User size={12}/> : <Sparkles size={12}/>}
+                    {msg.role === 'user' ? 'Human' : 'Groq AI'}
                   </div>
-                  <p className="whitespace-pre-wrap leading-relaxed text-sm md:text-base">
-                    {msg.text}
-                  </p>
+                  <p className="text-sm md:text-base leading-relaxed">{msg.text}</p>
                 </div>
               </motion.div>
             ))
           )}
-          {loading && (
-            <div className="flex items-center gap-2 text-blue-400 text-xs font-bold ml-2">
-              <div className="w-1 h-1 bg-blue-400 rounded-full animate-ping" />
-              Gemini is processing...
-            </div>
-          )}
         </AnimatePresence>
       </main>
 
-      {/* Input Section */}
-      <div className="p-4 pb-10 bg-[#0e0e12]/80 backdrop-blur-md sticky bottom-0">
-        <div className="max-w-3xl mx-auto relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl blur opacity-10 group-focus-within:opacity-25 transition duration-500" />
-          <div className="relative flex items-center bg-[#1c1c22] rounded-2xl p-2 border border-white/10 shadow-2xl">
-            <input 
-              value={input} 
-              onChange={(e) => setInput(e.target.value)} 
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
-              className="flex-1 bg-transparent border-none outline-none p-4 text-white placeholder-gray-600" 
-              placeholder="Ask anything..." 
-            />
-            <button 
-              onClick={handleSend} 
-              disabled={loading} 
-              className="p-4 text-blue-400 hover:scale-110 active:scale-90 disabled:opacity-30 disabled:hover:scale-100 transition-all"
-            >
-              <Send size={24} />
-            </button>
-          </div>
+      {/* Input */}
+      <div className="p-4 pb-10 bg-[#0b0b0f]">
+        <div className="max-w-3xl mx-auto flex items-center bg-[#16161c] rounded-2xl p-2 border border-white/10">
+          <input 
+            value={input} 
+            onChange={(e) => setInput(e.target.value)} 
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
+            className="flex-1 bg-transparent border-none outline-none p-4 text-white" 
+            placeholder="Type fast, think faster..." 
+          />
+          <button onClick={handleSend} disabled={loading} className="p-4 text-orange-400 disabled:opacity-30">
+            <Send size={24} />
+          </button>
         </div>
       </div>
     </div>
