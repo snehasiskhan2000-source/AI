@@ -10,29 +10,35 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [speakingId, setSpeakingId] = useState(null);
-  const scrollRef = useRef(null);
+  
+  // Ref for the bottom of the chat
+  const messagesEndRef = useRef(null);
 
   const toggleTheme = () => setIsDark(!isDark);
+
+  // Auto-scroll function
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Trigger scroll whenever messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const speak = (text, id) => {
     window.speechSynthesis.cancel();
     if (speakingId === id) { setSpeakingId(null); return; }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.05; // Slightly faster for a "Chad" vibe
+    utterance.rate = 1.05;
     utterance.onstart = () => setSpeakingId(id);
     utterance.onend = () => setSpeakingId(null);
     window.speechSynthesis.speak(utterance);
   };
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
-
   const handleSend = async () => {
     if (!input.trim()) return;
     const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-    
-    // FIX: Get current date to tell the AI
     const today = new Date().toLocaleDateString('en-IN', { 
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
     });
@@ -48,10 +54,7 @@ export default function App() {
       const groq = new Groq({ apiKey: API_KEY, dangerouslyAllowBrowser: true });
       const stream = await groq.chat.completions.create({
         messages: [
-          { 
-            role: "system", 
-            content: `You are ChadGPT, a premium AI assistant created by TechBittu. Today is ${today}. Use markdown for all responses. Your personality is helpful, direct, and professional. Your UI theme is Electric Blue and Deep Black.` 
-          }, 
+          { role: "system", content: `You are ChadGPT by TechBittu. Today is ${today}. Use markdown.` }, 
           { role: "user", content: input }
         ],
         model: "llama-3.3-70b-versatile",
@@ -69,15 +72,13 @@ export default function App() {
   return (
     <div className={`${isDark ? 'dark bg-[#050505] text-white' : 'bg-gray-50 text-gray-900'} min-h-screen flex flex-col transition-colors duration-500 font-sans`}>
       
-      {/* HEADER */}
       <nav className="p-4 border-b border-blue-500/10 flex justify-between items-center backdrop-blur-xl sticky top-0 z-50 bg-inherit/80">
-        <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <div className="bg-blue-600 p-1.5 rounded-lg shadow-[0_0_20px_rgba(37,99,235,0.4)]">
             <Zap className="text-white" size={20} fill="white" />
           </div>
           <h1 className="text-xl font-black uppercase tracking-tighter italic">Chad<span className="text-blue-500">GPT</span></h1>
-        </motion.div>
-        
+        </div>
         <div className="flex gap-2">
           <button onClick={toggleTheme} className="p-2 hover:bg-blue-500/10 rounded-xl transition-all">
             {isDark ? <Sun size={20} className="text-blue-400" /> : <Moon size={20} className="text-blue-600" />}
@@ -88,38 +89,21 @@ export default function App() {
         </div>
       </nav>
 
-      {/* CHAT AREA */}
-      <main ref={scrollRef} className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full space-y-8 pb-32">
+      <main className="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full space-y-8 pb-32 scroll-smooth">
         <AnimatePresence mode="wait">
           {messages.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6"
-            >
-              <div className="relative">
-                <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 animate-pulse rounded-full"></div>
-                <Sparkles className="text-blue-500 w-16 h-16 relative z-10" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-4xl font-black tracking-tight leading-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
-                <p className="text-gray-500 font-medium max-w-sm mx-auto italic">TechBittu's flagship AI. Fast, Blue, and Intelligent.</p>
-              </div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="h-full flex flex-col justify-center items-center text-center pt-24 space-y-6">
+              <Sparkles className="text-blue-500 w-16 h-16 animate-pulse" />
+              <h2 className="text-4xl font-black tracking-tight">Hey! This is <span className="text-blue-500">ChadGPT</span></h2>
             </motion.div>
           ) : (
             messages.map((m, i) => (
-              <motion.div 
-                key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${
-                  m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'
-                }`}>
+              <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`p-5 rounded-3xl max-w-[90%] shadow-2xl ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-[#111116] border border-blue-500/10 rounded-tl-none'}`}>
                   <div className="flex justify-between items-center mb-2 opacity-50 text-[10px] font-bold uppercase tracking-widest">
                     <span>{m.role === 'user' ? 'Member' : 'ChadGPT'}</span>
-                    {m.role === 'ai' && m.text && (
-                      <button onClick={() => speak(m.text, m.id)} className="text-blue-500 ml-4 hover:scale-125 transition-transform">
-                        {speakingId === m.id ? <StopCircle size={14} /> : <Volume2 size={14} />}
-                      </button>
+                    {m.role === 'ai' && (
+                      <button onClick={() => speak(m.text, m.id)} className="text-blue-500 ml-4">{speakingId === m.id ? <StopCircle size={14} /> : <Volume2 size={14} />}</button>
                     )}
                   </div>
                   <div className="prose dark:prose-invert prose-blue max-w-none text-[15px] font-medium leading-relaxed">
@@ -129,19 +113,15 @@ export default function App() {
               </motion.div>
             ))
           )}
+          {/* Invisible element to anchor the scroll */}
+          <div ref={messagesEndRef} />
         </AnimatePresence>
       </main>
 
-      {/* INPUT BAR */}
       <footer className="p-4 fixed bottom-0 left-0 right-0 bg-gradient-to-t from-inherit via-inherit to-transparent z-40">
-        <div className="max-w-3xl mx-auto flex items-center gap-2 bg-white dark:bg-[#111116] p-2 rounded-2xl border border-blue-500/20 shadow-2xl focus-within:ring-2 ring-blue-500/20 transition-all">
-          <input 
-            value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} 
-            className="flex-1 bg-transparent p-3 outline-none text-sm" placeholder="Ask TechBittu's AI anything..." 
-          />
-          <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white shadow-lg active:scale-90 transition-all disabled:opacity-30">
-            <Send size={20}/>
-          </button>
+        <div className="max-w-3xl mx-auto flex items-center gap-2 bg-white dark:bg-[#111116] p-2 rounded-2xl border border-blue-500/20 shadow-2xl">
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} className="flex-1 bg-transparent p-3 outline-none text-sm" placeholder="Ask TechBittu's AI..." />
+          <button onClick={handleSend} disabled={loading} className="bg-blue-600 hover:bg-blue-500 p-3.5 rounded-xl text-white transition-all disabled:opacity-30"><Send size={20}/></button>
         </div>
       </footer>
     </div>
