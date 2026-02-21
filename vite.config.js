@@ -8,8 +8,12 @@ export default defineConfig({
     tailwindcss(),
   ],
   preview: {
-    // This allows both your custom domain and the render URL to work
-    allowedHosts: ['techbittu.in', 'www.techbittu.in', 'ai-vhsk.onrender.com'],
+    // Add your new subdomain here so Vite allows the connection
+    allowedHosts: [
+      'ai.techbittu.in', 
+      'techbittu.in', 
+      'ai-vhsk.onrender.com'
+    ],
     host: '0.0.0.0',
     port: 10000
   }
